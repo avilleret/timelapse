@@ -15,7 +15,10 @@ import cv2
 import numpy as np
 import ctypes
 from datetime import datetime
+import time
 import os
+
+cv2.namedWindow('preview', cv2.WINDOW_NORMAL)
 
 gi.require_version ('Aravis', '0.8')
 
@@ -33,8 +36,12 @@ except TypeError:
 	exit ()
 
 # camera.set_region (0,0,128,128)
-camera.set_frame_rate (10.0)
+camera.set_frame_rate (1)
 camera.set_pixel_format (Aravis.PIXEL_FORMAT_RGB_8_PACKED)
+camera.set_exposure_time_auto(Aravis.Auto.OFF)
+camera.set_exposure_time(15000)
+camera.set_gain_auto(Aravis.Auto.OFF)
+camera.set_gain(1)
 
 payload = camera.get_payload ()
 
@@ -76,6 +83,7 @@ print ("Acquisition")
 folder = datetime.now().strftime('%Y.%m.%d-%H.%M.%S')
 os.mkdir(folder)
 count = 0
+next = time.time()
 while True:
 	buf = stream.pop_buffer ()
 	if buf:
@@ -83,17 +91,19 @@ while True:
 		stream.push_buffer (buf)
 		image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 		
-		cv2.imshow("preview",image)
+		cv2.imshow('preview',image)
 		ch = cv2.waitKey(1) & 0xFF
 		if ch == 27 or ch == ord('q'):
 			break
-	
-		filename = folder + f'/{count:06}'  + '.jpg'
-		result=cv2.imwrite(filename, image)
-		if result==True:
-			count+=1
-		else:
-			print ("Error in saving file")
+		
+		if next < time.time():
+			next = time.time() + 10
+			filename = folder + f'/{count:06}'  + '.jpg'
+			result=cv2.imwrite(filename, image)
+			if result==True:
+				count+=1
+			else:
+				print ("Error in saving file")
 print ("Stop acquisition")
 
 camera.stop_acquisition ()
